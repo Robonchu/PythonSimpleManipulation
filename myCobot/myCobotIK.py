@@ -68,10 +68,11 @@ if __name__ == "__main__":
 
     pos = sp.Matrix([[0, 0, 0]]).T
     R = sp.eye(3)
-    angle_list = [ang1, ang2, ang3, ang4, ang5, ang6]
-    for i in range(6):
+    angle_list = [ang1, ang2, ang3, ang4, ang5, ang6, 0]
+    for i in range(7):
         pos = pos + R * length_list[i, :].T
         R = R * rodrigues(vector_list[i], angle_list[i])
+
     pos = sp.simplify(pos)
     R = sp.simplify(R)
 
