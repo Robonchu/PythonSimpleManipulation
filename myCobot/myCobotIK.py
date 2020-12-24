@@ -72,6 +72,8 @@ if __name__ == "__main__":
     for i in range(6):
         pos = pos + R * length_list[i, :].T
         R = R * rodrigues(vector_list[i], angle_list[i])
+    pos = sp.simplify(pos)
+    R = sp.simplify(R)
 
     # Rrpy = rot_z(yaw) * rot_y(pitch) * rot_x(roll)
     # Rrpy = rot_z(yaw) * rot_x(pitch) * rot_y(roll)
@@ -79,6 +81,10 @@ if __name__ == "__main__":
     phi = sp.atan2(R[2, 1], R[2, 2])
     theta = sp.asin(-R[2, 0])
     psi = sp.atan2(R[1, 0], R[0, 0])
+
+    phi = sp.simplify(phi)
+    theta = sp.simplify(theta)
+    psi = sp.simplify(psi)
 
     import pdb
     pdb.set_trace()
