@@ -169,11 +169,88 @@ def rot_z(psi):
     return r
 
 
+def CalcAnalyticalIK(target_pos,
+                     target_yaw,
+                     length_list,
+                     mode='floor_grasping'):
+
+    if mode == 'floor_grasping':
+        yaw1, yaw2 = CalcFirstYawAngleByCircle(target_pos[0], target_pos[1])
+        b1, b2, b3, b4, b5, b6, b7 = length_list[:7]
+        # memo: This top_arm part coordinate is for floor graspoing.
+        # This is a kind of gripper orientation constraint toward ground.
+        top_arm = np.array([b6[2], b5[1], -b7[0]])
+
+        # memo: Target position for Joint 4 from Joint 2
+        pre_target_pos = target_pos - (rot_z(yaw2) @ top_arm) - np.array(
+            [0., 0, b1[2] + b2[2]])
+        rad1 = yaw2
+        rad5 = 0.
+        rad6 = -(target_yaw - yaw2)
+        # rad6 = (target_yaw - yaw2)
+        bottom_arm_length = np.sqrt(np.sum(np.square(pre_target_pos)))
+        rad3 = np.arccos((np.square(bottom_arm_length) -
+                          (b3[2]**2 + b4[2]**2)) / (2 * b3[2] * b4[2]))
+        alpha = np.arcsin(b4[2] * np.sin(np.pi - rad3) / bottom_arm_length)
+        rad2 = -np.arctan2(
+            pre_target_pos[2],
+            np.sqrt(pre_target_pos[0]**2 +
+                    pre_target_pos[1]**2)) - alpha + np.pi / 2.
+        rad4 = np.pi / 2. - rad3 - rad2
+        angle_list = np.array([rad1, rad2, rad3, rad4, rad5, rad6])
+        return angle_list
+    else:
+        print('please set correct mode for IK')
+
+
+def CalcJointAngles(target_poses, target_yaws, length_list, dof=6):
+    point_num = len(target_poses)
+    angles = np.zeros((point_num, dof))
+    for i, (target_pos, target_yaw) in enumerate(zip(target_poses,
+                                                     target_yaws)):
+        angles[i] = CalcAnalyticalIK(target_pos, target_yaw, length_list)
+    return angles
+
+
+def AngleInterpolation(angles, num=100):
+    # TODO(robonchu): modify it to array for more speedup
+    interpolated_angles = []
+    for i in range(len(angles)):
+        angle_gap = angles[i + 1] - angles[i]
+        for j in range(num):
+            interpolated_angles.append(angles[i] + j * angle_gap / num * 1.0)
+    return interpolated_angles
+
+
+# def CreatePathPoints(pos_waypoints, yaw_waypoints):
+#     reso = 0.005
+#     target_poses = []
+#     for i in range(len(pos_waypoints)):
+#         path = pos_waypoints[i + 1] - pos_waypoints[i]
+
+#     pass
+
 if __name__ == "__main__":
     # target_pos = np.array([0.21, 0.06639, 0.02])
     # target_pos = np.array([0.21, 0, 0.02])
-    target_pos = np.array([0.24, 0, 0.02])
+    # target_pos = np.array([0.24, 0, 0.02])
+
+    target_pos1 = np.array([0.24, -0.05, 0.02])
+    target_pos2 = np.array([0.24, 0.05, 0.02])
+    target_pos3 = np.array([0.19, 0.05, 0.02])
+    target_pos4 = np.array([0.19, -0.05, 0.02])
+    target_pos5 = np.array([0.24, -0.05, 0.02])
+    target_poses = [
+        target_pos1, target_pos2, target_pos3, target_pos4, target_pos5
+    ]
     target_yaw = 0.
+    target_yaws = [target_yaw, target_yaw, target_yaw, target_yaw, target_yaw]
+
+    angles = CalcJointAngles(target_poses, target_yaws, length_list)
+    import pdb
+    pdb.set_trace()
+    angle_list = angles[-1]
+    '''
     # please use yaw2 for myCobot
     # yaw1, yaw2 = CalcFirstYawAngleByCircle(0.15, 0)
     # yaw1, yaw2 = CalcFirstYawAngleByCircle(0.15, 0.06639)
@@ -195,15 +272,18 @@ if __name__ == "__main__":
                        np.sqrt(pre_target_pos[0]**2 +
                                pre_target_pos[1]**2)) - alpha + np.pi / 2.
     ang4 = np.pi / 2. - ang3 - ang2
-
-    import pdb
-    pdb.set_trace()
+    '''
 
     ARM_NUM = 7
     GRIPPER_NUM = 4
     TOTAL_NUM = ARM_NUM + GRIPPER_NUM
 
-    angle_list = [ang1, ang2, ang3, ang4, ang5, ang6, 0, 0, 0, 0, 0]
+    # angle_list = [ang1, ang2, ang3, ang4, ang5, ang6, 0, 0, 0, 0, 0]
+    angle_list = np.append(angle_list, [0, 0, 0, 0, 0])
+
+    import pdb
+    pdb.set_trace()
+
     pos = [0, 0, 0]
     R = np.eye(3)
     pos_list = [pos]
